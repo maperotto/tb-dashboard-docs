@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Monitoramento de Tuberculose - Ciências e Saúde</title>
+    <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;600;700&family=Spectral:wght@500;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-start: #f4f6f3;
+            --bg-end: #e4eef4;
+            --ink: #0f172a;
+            --muted: #5b6475;
+            --brand: #0c5aa5;
+            --brand-soft: #dbeafe;
+            --accent: #e25822;
+            --card: #ffffff;
+            --shadow: 0 18px 40px rgba(15, 23, 42, 0.12);
+        }
+        body {
+            background: radial-gradient(1200px 600px at 15% 5%, #ffffff, transparent),
+                        radial-gradient(900px 500px at 85% 10%, #e7f0ff, transparent),
+                        linear-gradient(180deg, var(--bg-start), var(--bg-end));
+            color: var(--ink);
+            font-family: 'Space Grotesk', system-ui, sans-serif;
+            min-height: 100vh;
+        }
+        .dashboard-header {
+            background: linear-gradient(120deg, #073b70, #0c5aa5 60%, #1d9bf0);
+            color: #f8fafc;
+            padding: 2.5rem 0 2rem;
+            margin-bottom: 2rem;
+            position: relative;
+            overflow: hidden;
+        }
+        .dashboard-header::after {
+            content: "";
+            position: absolute;
+            inset: -40% 10% auto auto;
+            width: 520px;
+            height: 520px;
+            background: radial-gradient(circle, rgba(255, 255, 255, 0.2), transparent 60%);
+            transform: rotate(-12deg);
+        }
+        .dashboard-header h1 {
+            font-family: 'Spectral', serif;
+            font-weight: 700;
+            letter-spacing: 0.4px;
+        }
+        .card {
+            border: none;
+            border-radius: 18px;
+            background: var(--card);
+            box-shadow: var(--shadow);
+        }
+        .stat-card { text-align: center; padding: 1.8rem; }
+        .stat-value { font-size: 2.4rem; font-weight: 700; color: var(--brand); }
+        .stat-label { color: var(--muted); text-transform: uppercase; font-size: 0.75rem; letter-spacing: 1.4px; }
+        .alert-critical { background-color: #fff3f3; border-left: 5px solid #dc3545; color: #842029; }
+        .filter-section { margin-bottom: 2rem; border: 1px solid #e2e8f0; }
+        .filter-section .form-select { min-width: 220px; }
+        .badge-pill {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.4rem;
+            padding: 0.35rem 0.75rem;
+            background: var(--brand-soft);
+            color: var(--brand);
+            border-radius: 999px;
+            font-size: 0.8rem;
+            font-weight: 600;
+        }
+        .soft-divider { height: 1px; background: linear-gradient(90deg, transparent, #cbd5f5, transparent); }
+        .fade-in { animation: fadeIn 0.6s ease forwards; opacity: 0; }
+        .stagger-1 { animation-delay: 0.08s; }
+        .stagger-2 { animation-delay: 0.16s; }
+        .stagger-3 { animation-delay: 0.24s; }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        @media (max-width: 768px) {
+            .dashboard-header { padding: 2rem 0 1.5rem; }
+            .stat-value { font-size: 2rem; }
+        }
+    </style>
+</head>
+<body>
+
+<header class="dashboard-header text-center">
+    <div class="container">
+        <h1>Dashboard de Monitoramento de Tuberculose</h1>
+        <p class="lead mb-2">Projeto Acadêmico - Disciplina de Novas Tecnologias</p>
+        <span class="badge-pill">MVP com CSV local</span>
+    </div>
+</header>
+
+<main class="container">
+    <!-- Alertas Visuais -->
+    {% if alert.triggered %}
+    <div class="alert alert-critical alert-dismissible fade show mb-4" role="alert">
+        <strong>⚠️ Alerta Crítico Detectado!</strong> 
+        O número de casos em {{ alert.mes }} atingiu <strong>{{ alert.casos }}</strong>, ultrapassando o limite de {{ alert.limite }}.
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>
+    {% endif %}
+
+    <!-- Filtros -->
+    <section class="filter-section card p-3 fade-in stagger-1">
+        <form action="/" method="get" class="row g-3 align-items-center">
+            <div class="col-auto">
+                <label for="estado" class="col-form-label fw-bold">Filtrar por Estado:</label>
+            </div>
+            <div class="col-auto">
+                <select name="estado" id="estado" class="form-select" onchange="this.form.submit()">
+                    <option value="Todos" {% if current_estado == 'Todos' %}selected{% endif %}>Todos os Estados</option>
+                    {% for est in stats.estados_unicos %}
+                    <option value="{{ est }}" {% if current_estado == est %}selected{% endif %}>{{ est }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-auto text-muted">
+                <small>Visualizando dados de: <strong>{{ current_estado }}</strong></small>
+            </div>
+        </form>
+    </section>
+
+    <!-- Estatísticas Rápidas -->
+    {% if stats.total_casos == 0 %}
+    <div class="alert alert-warning mb-4" role="alert">
+        Nenhum dado encontrado para o filtro selecionado. Verifique o CSV e tente novamente.
+    </div>
+    {% endif %}
+    <div class="row mb-4 fade-in stagger-2">
+        <div class="col-md-6">
+            <div class="card stat-card">
+                <div class="stat-label">Total de Casos</div>
+                <div class="stat-value">{{ stats.total_casos }}</div>
+            </div>
+        </div>
+        <div class="col-md-6">
+            <div class="card stat-card">
+                <div class="stat-label">Média de Idade</div>
+                <div class="stat-value">{{ stats.media_idade }} anos</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Gráfico -->
+    <div class="row fade-in stagger-3">
+        <div class="col-12">
+            <div class="card p-3">
+                <div id="trend-chart"></div>
+            </div>
+        </div>
+    </div>
+
+    <footer class="mt-5 mb-4 text-center text-muted">
+        <div class="soft-divider mb-3"></div>
+        <p>&copy; 2026 - Projeto de Monitoramento Epidemiológico. Dados simulados para fins acadêmicos.</p>
+    </footer>
+</main>
+
+<script>
+    // Renderizar o gráfico do Plotly
+    var graphData = {{ graph_json | safe }};
+    Plotly.newPlot('trend-chart', graphData.data, graphData.layout, {responsive: true});
+</script>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>
