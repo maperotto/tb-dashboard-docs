@@ -4,7 +4,7 @@ Este projeto acadêmico tem como objetivo demonstrar um dashboard simples para m
 
 ## Stack Tecnológico
 
-*   **Python 3.x**
+*   **Python 3.x** (testado com Python 3.12)
 *   **Flask**: Framework web para o servidor e rotas da API.
 *   **Pandas**: Para manipulação e análise de dados.
 *   **NumPy**: Para operações numéricas auxiliares.
@@ -82,6 +82,12 @@ Ou, alternativamente, execute diretamente o `app.py`:
 
 ```bash
 python3 app.py
+```
+
+No Windows, voce pode usar o script [run.ps1](run.ps1) para iniciar rapidamente:
+
+```powershell
+./run.ps1
 ```
 
 ### 6. Acesse o Dashboard
